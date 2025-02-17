@@ -12,9 +12,21 @@ jobs:
       - name: Get comment details
         id: comment-details
         run: |
-          echo "comment_body=${{ github.event.comment.body }}" >> $GITHUB_OUTPUT
-          echo "issue_title=${{ github.event.issue.title }}" >> $GITHUB_OUTPUT
-          echo "issue_url=${{ github.event.issue.html_url }}" >> $GITHUB_OUTPUT
+          {
+            echo "comment_body<<EOF"
+            echo "${{ github.event.comment.body }}"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+          {
+            echo "issue_title<<EOF"
+            echo "${{ github.event.issue.title }}"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+          {
+            echo "issue_url<<EOF"
+            echo "${{ github.event.issue.html_url }}"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
 
       - name: Summarize comment and generate title using OpenAI
         id: ai-summary
