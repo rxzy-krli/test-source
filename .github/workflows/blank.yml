@@ -26,20 +26,20 @@ jobs:
           # 转义评论内容中的特殊字符
           ESCAPED_COMMENT=$(echo "$COMMENT_BODY" | jq -R -s '.')
           
-          PAYLOAD=$(cat <<EOF
-          {
-            "model": "glm-4-flash",
-            "messages": [
-              {
-                "role": "system",
-                "content": "你是一个专业的总结者，根据提供的文本总结核心内容并生成一个简洁的标题。输出格式为：标题: [标题内容]\n总结: [总结内容]"
-              },
-              {
-                "role": "user",
-                "content": ${ESCAPED_COMMENT}
-              }
-            ]
-          }
+          PAYLOAD=$(cat <<'EOF'
+{
+  "model": "glm-4-flash",
+  "messages": [
+    {
+      "role": "system",
+      "content": "你是一个专业的总结者，根据提供的文本总结核心内容并生成一个简洁的标题。输出格式为：标题: [标题内容]\n总结: [总结内容]"
+    },
+    {
+      "role": "user",
+      "content": ${ESCAPED_COMMENT}
+    }
+  ]
+}
 EOF
           )
           
