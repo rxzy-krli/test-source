@@ -26,22 +26,24 @@ jobs:
           # 转义评论内容中的特殊字符
           ESCAPED_COMMENT=$(echo "$COMMENT_BODY" | jq -R -s '.')
           
-          PAYLOAD=$(cat <<'EOF'
-{
-  "model": "glm-4-flash",
-  "messages": [
-    {
-      "role": "system",
-      "content": "你是一个专业的总结者，根据提供的文本总结核心内容并生成一个简洁的标题。输出格式为：标题: [标题内容]\n总结: [总结内容]"
-    },
-    {
-      "role": "user",
-      "content": ${ESCAPED_COMMENT}
-    }
-  ]
-}
-EOF
-          )
+          # 使用 jq 构建 JSON payload
+          PAYLOAD=$(jq -n \
+            --arg model "glm-4-flash" \
+            --arg system_content "你是一个专业的总结者，根据提供的文本总结核心内容并生成一个简洁的标题。输出格式为：标题: [标题内容]\n总结: [总结内容]" \
+            --arg user_content "$COMMENT_BODY" \
+            '{
+              model: $model,
+              messages: [
+                {
+                  role: "system",
+                  content: $system_content
+                },
+                {
+                  role: "user",
+                  content: $user_content
+                }
+              ]
+            }')
           
           # 打印请求负载以供调试
           echo "Debug - Payload:"
