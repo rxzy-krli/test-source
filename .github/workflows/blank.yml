@@ -1,0 +1,66 @@
+name: Forward Issue Comments to Another Repo with AI Summary
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  forward-comment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get comment details
+        id: comment-details
+        run: |
+          echo "::set-output name=comment_body::${{ github.event.comment.body }}"
+          echo "::set-output name=issue_title::${{ github.event.issue.title }}"
+          echo "::set-output name=issue_url::${{ github.event.issue.html_url }}"
+
+      - name: Summarize comment and generate title using OpenAI
+        id: ai-summary
+        env:
+          OPENAI_API_KEY: ${{ secrets.GLM_AI_TOKEN }}
+        run: |
+          COMMENT_BODY="${{ steps.comment-details.outputs.comment_body }}"
+          PAYLOAD=$(jq -n --arg text "$COMMENT_BODY" '{
+            "model": "glm-4-flash",
+            "messages": [
+              {
+                "role": "system",
+                "content": "你是一个专业的总结者，根据提供的文本总结核心内容并生成一个简洁的标题。输出格式为：标题: [标题内容]\n总结: [总结内容]"
+              },
+              {
+                "role": "user",
+                "content": "$text"
+              }
+            ]
+          }')
+          RESPONSE=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            https://open.bigmodel.cn/api/paas/v4/chat/completions \
+            -d "$PAYLOAD")
+          SUMMARY=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
+          TITLE=$(echo "$SUMMARY" | grep '标题:' | cut -d ':' -f 2- | xargs)
+          SUMMARY_CONTENT=$(echo "$SUMMARY" | grep '总结:' | cut -d ':' -f 2- | xargs)
+          echo "::set-output name=ai_title::$TITLE"
+          echo "::set-output name=ai_summary::$SUMMARY_CONTENT"
+
+      - name: Create issue in target repo
+        env:
+          TARGET_REPO_OWNER: your-target-repo-owner
+          TARGET_REPO_NAME: your-target-repo-name
+          GITHUB_TOKEN: ${{ secrets.TARGET_REPO_PAT }}
+        run: |
+          ISSUE_URL="${{ steps.comment-details.outputs.issue_url }}"
+          AI_TITLE="${{ steps.ai-summary.outputs.ai_title }}"
+          AI_SUMMARY="${{ steps.ai-summary.outputs.ai_summary }}"
+          COMMENT_BODY="${{ steps.comment-details.outputs.comment_body }}"
+
+          NEW_ISSUE_TITLE="Comment Summary from ${{ github.repository }}: $AI_TITLE"
+          NEW_ISSUE_BODY="Original issue: $ISSUE_URL\n\nAI Summary:\n$AI_SUMMARY\n\nOriginal Comment:\n$COMMENT_BODY"
+
+          curl -X POST \
+            -H "Authorization: token $DST_ISSUE_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/rxzy-krli/test-source/issues" \
+            -d "{\"title\": \"$NEW_ISSUE_TITLE\", \"body\": \"$NEW_ISSUE_BODY\"}"
