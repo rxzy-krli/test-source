@@ -23,7 +23,11 @@ jobs:
         run: |
           COMMENT_BODY="${{ steps.comment-details.outputs.comment_body }}"
 
-          PAYLOAD=$(jq -n --arg text "$COMMENT_BODY" '{
+          # 转义评论内容中的特殊字符
+          ESCAPED_COMMENT=$(echo "$COMMENT_BODY" | jq -R -s '.')
+          
+          PAYLOAD=$(cat <<EOF
+          {
             "model": "glm-4-flash",
             "messages": [
               {
@@ -32,10 +36,12 @@ jobs:
               },
               {
                 "role": "user",
-                "content": "$text"
+                "content": ${ESCAPED_COMMENT}
               }
             ]
-          }')
+          }
+EOF
+          )
           
           # 打印请求负载以供调试
           echo "Debug - Payload:"
@@ -94,10 +100,10 @@ jobs:
           TARGET_REPO_NAME: test-dst
           GITHUB_TOKEN: ${{ secrets.DST_ISSUE_TOKEN }}
         run: |
-          ISSUE_URL=$GITHUB_STATE.issue_url
-          AI_TITLE=$GITHUB_STATE.ai_title
-          AI_SUMMARY=$GITHUB_STATE.ai_summary
-          COMMENT_BODY=$GITHUB_STATE.comment_body
+          ISSUE_URL="${{ steps.comment-details.outputs.issue_url }}"
+          AI_TITLE="${{ steps.ai-summary.outputs.ai_title }}"
+          AI_SUMMARY="${{ steps.ai-summary.outputs.ai_summary }}"
+          COMMENT_BODY="${{ steps.comment-details.outputs.comment_body }}"
 
           NEW_ISSUE_TITLE="Comment Summary from ${{ github.repository }}: $AI_TITLE"
           NEW_ISSUE_BODY="Original issue: $ISSUE_URL\n\nAI Summary:\n$AI_SUMMARY\n\nOriginal Comment:\n$COMMENT_BODY"
