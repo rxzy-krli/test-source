@@ -122,8 +122,17 @@ jobs:
           NEW_ISSUE_TITLE="Comment Summary from ${{ github.repository }}: $AI_TITLE"
           NEW_ISSUE_BODY="Original issue: $ISSUE_URL\n\nAI Summary:\n$AI_SUMMARY\n\nOriginal Comment:\n$COMMENT_BODY"
 
+          # 使用 jq 构建 issue payload
+          ISSUE_PAYLOAD=$(jq -n \
+            --arg title "$NEW_ISSUE_TITLE" \
+            --arg body "$NEW_ISSUE_BODY" \
+            '{
+              title: $title,
+              body: $body
+            }')
+
           curl -X POST \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
             "https://api.github.com/repos/$TARGET_REPO_OWNER/$TARGET_REPO_NAME/issues" \
-            -d "{\"title\": \"$NEW_ISSUE_TITLE\", \"body\": \"$NEW_ISSUE_BODY\"}"
+            -d "$ISSUE_PAYLOAD"
