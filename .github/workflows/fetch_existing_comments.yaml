@@ -6,7 +6,6 @@ on:
 jobs:
   fetch-existing-comments:
     runs-on: ubuntu-latest
-    if: github.event.issue.number == 1 # 移动到 job 级别
     steps:
       - name: Fetch existing comments
         id: fetch-comments
